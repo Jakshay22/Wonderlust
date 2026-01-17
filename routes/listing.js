@@ -4,8 +4,14 @@ const wrapAsync = require("../utils/wrapAsync.js");
 const { isLoggedIn, isOwner, validateListing } = require("../middleware.js");
 const listingController = require("../controllers/listings.js");
 const multer  = require('multer');
-const { storage } = require("../cloudConfig.js");
+const { storage } = require("../cloudConfig");
+
+if (!storage) {
+  throw new Error("Cloudinary storage not initialized");
+}
+
 const upload = multer({ storage });
+
 
 router
     .route("/")
