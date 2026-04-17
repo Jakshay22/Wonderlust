@@ -3,7 +3,7 @@
 <div class="row mt-4">
     <div class="col-md-8 col-lg-6 offset-md-2 offset-lg-3">
         <h3>Confirm Your Booking</h3>
-        <div class="card shadow-sm mt-3">
+        <div class="card shadow-sm mt-3 booking-card">
             <img
                 src="<%= listing.image && listing.image.url ? listing.image.url : 'https://via.placeholder.com/600x400?text=No+Image' %>"
                 class="card-img-top"
@@ -15,7 +15,7 @@
                 <p class="card-text mb-1"><%= listing.location %>, <%= listing.country %></p>
                 <p class="card-text fw-bold">&#8377; <%= listing.price.toLocaleString("en-IN") %> / night</p>
                 <hr>
-                <form action="/listings/<%= listing._id %>/book" method="POST">
+                <form action="/listings/<%= listing._id %>/book" method="POST" class="booking-form">
                     <div class="mb-3">
                         <label class="form-label" for="checkIn">Check-in</label>
                         <input id="checkIn" name="booking[checkIn]" type="date" class="form-control" required>
