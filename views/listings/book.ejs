@@ -1,0 +1,47 @@
+<% layout("layouts/boilerplate") %>
+
+<div class="row mt-4">
+    <div class="col-md-8 col-lg-6 offset-md-2 offset-lg-3">
+        <h3>Confirm Your Booking</h3>
+        <div class="card shadow-sm mt-3">
+            <img
+                src="<%= listing.image && listing.image.url ? listing.image.url : 'https://via.placeholder.com/600x400?text=No+Image' %>"
+                class="card-img-top"
+                alt="listing image"
+                style="height: 16rem; object-fit: cover;"
+            >
+            <div class="card-body">
+                <h5 class="card-title"><%= listing.title %></h5>
+                <p class="card-text mb-1"><%= listing.location %>, <%= listing.country %></p>
+                <p class="card-text fw-bold">&#8377; <%= listing.price.toLocaleString("en-IN") %> / night</p>
+                <hr>
+                <form action="/listings/<%= listing._id %>/book" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label" for="checkIn">Check-in</label>
+                        <input id="checkIn" name="booking[checkIn]" type="date" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="checkOut">Check-out</label>
+                        <input id="checkOut" name="booking[checkOut]" type="date" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="guests">Guests</label>
+                        <input id="guests" name="booking[guests]" type="number" class="form-control" min="1" max="12" value="2" required>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-dark">Confirm Booking</button>
+                        <a href="/listings/<%= listing._id %>" class="btn btn-outline-secondary">Back</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const today = new Date().toISOString().split("T")[0];
+    const checkInInput = document.getElementById("checkIn");
+    const checkOutInput = document.getElementById("checkOut");
+    checkInInput.min = today;
+    checkOutInput.min = today;
+</script>

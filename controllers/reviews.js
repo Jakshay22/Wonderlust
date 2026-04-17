@@ -4,7 +4,11 @@ const Listing = require("../models/listing.js");
 module.exports.createReview = async(req, res) => {
     let listing = await Listing.findById(req.params.id);
     let newReview = new Review(req.body.review);
-    newReview.author = req.user._id;
+    if (req.user && req.user._id) {
+        newReview.author = req.user._id;
+    } else {
+        newReview.anonymousName = `guest_${Math.floor(Math.random() * 10000)}`;
+    }
 
     listing.reviews.push(newReview);
 
