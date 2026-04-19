@@ -1,6 +1,6 @@
 <% layout("/layouts/boilerplate") %>
-<div class="row mt-3">
-    <div class="col-8 offset-2">
+<div class="row mt-4 justify-content-center">
+    <div class="col-12 col-lg-8">
         <h3 class="my-3">Edit Your Listing</h3>
         <form method="POST" action="/listings/<%= listing._id %>?_method=PUT" novalidate class="needs-validation" enctype="multipart/form-data">
             <div class="mb-3">
@@ -29,7 +29,15 @@
                     <input name="listing[price]" value="<%= listing.price %>" type="number" class="form-control" required>
                     <div class="invalid-feedback">Price should be valid</div>
                 </div>
-                <div class="mb-3 col-md-8">
+                <div class="mb-3 col-md-4">
+                    <label for="category" class="form-label">Category</label>
+                    <select name="listing[category]" class="form-select" required>
+                        <% Object.entries(categoryLabels).forEach(([value, label]) => { %>
+                            <option value="<%= value %>" <%= listing.category === value ? "selected" : "" %>><%= label %></option>
+                        <% }) %>
+                    </select>
+                </div>
+                <div class="mb-3 col-md-4">
                     <label for="country" class="form-label">Country</label>
                     <input name="listing[country]" value="<%= listing.country %>" type="text" class="form-control" required>
                     <div class="invalid-feedback">Country name should be valid</div>

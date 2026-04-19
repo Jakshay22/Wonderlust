@@ -1,7 +1,67 @@
 const Listing = require("../models/listing");
 const Review = require("../models/review");
-const ExpressError = require("../utils/ExpressError.js");
-const { listingSchema } = require("../schema.js");
+
+const CATEGORY_KEYWORDS = {
+    trending: ["trending", "popular", "modern", "luxury", "featured", "hot", "famous"],
+    rooms: ["room", "suite", "studio", "apartment", "stay", "loft", "villa", "home"],
+    cities: ["city", "downtown", "metro", "urban", "tokyo", "mumbai", "paris", "new york", "london", "dubai"],
+    mountains: ["mountain", "hill", "valley", "himalaya", "alps", "cliff", "peak"],
+    castles: ["castle", "fort", "palace", "heritage", "royal"],
+    pools: ["pool", "swim", "waterfront", "lagoon", "lakefront"],
+    camping: ["camp", "tent", "glamp", "forest", "wild", "nature"],
+    farms: ["farm", "barn", "orchard", "cottage", "vineyard", "ranch"],
+    arctic: ["snow", "ice", "igloo", "arctic", "northern", "glacier", "aurora"],
+};
+
+const CATEGORY_LABELS = {
+    trending: "Trending",
+    rooms: "Rooms",
+    cities: "Cities",
+    mountains: "Mountains",
+    castles: "Castles",
+    pools: "Amazing pools",
+    camping: "Camping",
+    farms: "Farms",
+    arctic: "Arctic",
+};
+
+function inferCategories(listing) {
+    const haystack = [
+        listing.category,
+        listing.title,
+        listing.description,
+        listing.location,
+        listing.country,
+    ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+    const matches = Object.entries(CATEGORY_KEYWORDS)
+        .filter(([, keywords]) => keywords.some((keyword) => haystack.includes(keyword)))
+        .map(([category]) => category);
+
+    if (listing.category && CATEGORY_LABELS[listing.category] && !matches.includes(listing.category)) {
+        matches.unshift(listing.category);
+    }
+
+    if (matches.length === 0) {
+        matches.push("trending");
+    }
+
+    return [...new Set(matches)];
+}
+
+function decorateListing(listing) {
+    const categories = inferCategories(listing);
+
+    return {
+        ...listing.toObject(),
+        displayCategories: categories,
+        displayCategoryLabels: categories.map((category) => CATEGORY_LABELS[category] || category),
+        primaryCategory: categories[0],
+    };
+}
 
 const randomUsernames = [
     "anonymous_traveler", "hidden_nomad", "mystery_guest", "ghost_wanderer", "silent_roamer",
@@ -22,14 +82,40 @@ const randomComments = [
 ];
 
 module.exports.index = async (req, res) => {
-    const allListings = await Listing.find({});
-    res.render("listings/index.ejs", { allListings });  // keep the variable as "allListings"
+    const { q = "", category = "" } = req.query;
+    const searchQuery = q.trim();
+    const categoryQuery = category.trim().toLowerCase();
+
+    const searchFilter = searchQuery
+        ? {
+            $or: [
+                { title: { $regex: searchQuery, $options: "i" } },
+                { description: { $regex: searchQuery, $options: "i" } },
+                { location: { $regex: searchQuery, $options: "i" } },
+                { country: { $regex: searchQuery, $options: "i" } },
+            ],
+        }
+        : {};
+
+    const listings = await Listing.find(searchFilter);
+    let allListings = listings.map(decorateListing);
+
+    if (categoryQuery && CATEGORY_LABELS[categoryQuery]) {
+        allListings = allListings.filter((listing) => listing.displayCategories.includes(categoryQuery));
+    }
+
+    res.render("listings/index.ejs", {
+        allListings,
+        currentSearch: searchQuery,
+        currentCategory: categoryQuery,
+        categoryLabels: CATEGORY_LABELS,
+    });
 }
 
 
 
 module.exports.renderNewForm = (req, res) => {
-    res.render("listings/new.ejs");
+    res.render("listings/new.ejs", { categoryLabels: CATEGORY_LABELS });
 }
 
 module.exports.showListing = async (req, res) => {
@@ -75,7 +161,14 @@ module.exports.showListing = async (req, res) => {
                 .populate("owner");
         }
         
-        res.render("listings/show.ejs", { listing, booked: req.query.booked === "1" });
+        const listingCategories = inferCategories(listing);
+        const decoratedListing = {
+            ...listing.toObject(),
+            displayCategories: listingCategories,
+            displayCategoryLabels: listingCategories.map((category) => CATEGORY_LABELS[category] || category),
+        };
+        
+        res.render("listings/show.ejs", { listing: decoratedListing, booked: req.query.booked === "1" });
 }
 
 module.exports.renderBookingPage = async (req, res) => {
@@ -97,14 +190,17 @@ module.exports.confirmBooking = async (req, res) => {
         return res.redirect("/listings");
     }
 
-    req.flash("success", "booked");
+    req.flash("success", "Booking confirmed!");
     res.redirect(`/listings/${id}?booked=1`);
 }
 
 module.exports.createListing = async (req, res, next) => {
     const newListing = new Listing(req.body.listing);
-    if (req.user && req.user._id) {
-        newListing.owner = req.user._id;
+    if (!newListing.category) {
+        newListing.category = inferCategories(newListing)[0];
+    }
+    if (res.locals.currUser && res.locals.currUser._id) {
+        newListing.owner = res.locals.currUser._id;
     }
     if (req.file) {
         let url = req.file.path;
@@ -126,24 +222,35 @@ module.exports.renderEditForm = async (req, res) => {
     const listing = await Listing.findById(id);
     if(!listing) {
         req.flash("error", "Listing you requested for does not exist!");
-        res.redirect("/listings");
+        return res.redirect("/listings");
     }
     
-    let originalImageUrl = listing.image.url;
+    let originalImageUrl = listing.image?.url || "https://via.placeholder.com/600x400?text=No+Image";
     originalImageUrl = originalImageUrl.replace("/upload", "/upload/w_250");
-    res.render("listings/edit.ejs", { listing, originalImageUrl });
+    res.render("listings/edit.ejs", { listing, originalImageUrl, categoryLabels: CATEGORY_LABELS });
 }
 
 module.exports.updateListing = async (req, res) => {
     let {id} = req.params;
-    let listing = await Listing.findByIdAndUpdate(id, {...req.body.listing});
+    let listing = await Listing.findById(id);
+
+    if (!listing) {
+        req.flash("error", "Listing you requested for does not exist!");
+        return res.redirect("/listings");
+    }
+
+    Object.assign(listing, req.body.listing);
+
+    if (!req.body.listing.category) {
+        listing.category = inferCategories({ ...listing.toObject(), ...req.body.listing })[0];
+    }
 
     if(typeof req.file !== "undefined") {
         let url = req.file.path;
         let filename = req.file.filename;
         listing.image = { url, filename };
-        await listing.save();
     }
+    await listing.save();
 
     req.flash("success", "Listing Updated!");
     res.redirect(`/listings/${id}`);
@@ -151,8 +258,7 @@ module.exports.updateListing = async (req, res) => {
 
 module.exports.destroyListing = async (req, res) => {
     let {id} = req.params;
-    let deletedListing = await Listing.findByIdAndDelete(id);
-    console.log(deletedListing);
+    await Listing.findByIdAndDelete(id);
     req.flash("success", "Listing Deleted!");
     res.redirect("/listings");
 }

@@ -1,17 +1,24 @@
 <% layout("/layouts/boilerplate") %>
-<div class="row mt-3">
-    <h1 class="col-6 offset-3">Login</h1>
-    <div class="col-6 offset-3">
-        <form action="/login" method="POST" class="needs-validation" novalidate>
-            <div class="mb-3">
-                <label for="username" id="username" class="form-label">Username</label>
-                <input name="username"type="text" class="form-control" required>
-            </div>
-            <div class="mb-3">
-                <label for="password" id="password" class="form-label">Password</label>
-                <input name="password"type="password" class="form-control" required>
-            </div>
-            <button class="btn btn-success">login</button>
-        </form>
+<div class="row mt-5 justify-content-center auth-page">
+    <div class="col-12 col-md-7 col-lg-5">
+        <div class="auth-card">
+            <p class="auth-eyebrow">Supabase Auth</p>
+            <h1>Login</h1>
+            <p class="auth-copy">Use your email and password to unlock booking, reviews, and hosting tools.</p>
+            <% if (!supabaseEnabled) { %>
+                <div class="alert alert-warning">Add `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` in your environment to enable login.</div>
+            <% } %>
+            <form action="/login" method="POST" class="needs-validation" novalidate>
+                <div class="mb-3">
+                    <label for="email" id="email" class="form-label">Email</label>
+                    <input name="email" type="email" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label for="password" id="password" class="form-label">Password</label>
+                    <input name="password" type="password" class="form-control" required>
+                </div>
+                <button class="btn btn-success auth-submit">Login</button>
+            </form>
+        </div>
     </div>
 </div>

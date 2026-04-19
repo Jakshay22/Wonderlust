@@ -17,6 +17,10 @@ const listingSchema = new Schema({
     price: Number,
     location: String,
     country: String,
+    category: {
+        type: String,
+        default: "trending",
+    },
     reviews: [
         {
             type: Schema.Types.ObjectId,

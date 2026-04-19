@@ -15,16 +15,12 @@ const ExpressError = require("./utils/ExpressError.js");
 const session = require("express-session");
 const MongoStore = require("connect-mongo").default;
 const flash = require("connect-flash");
-const passport = require("passport");
-const LocalStrategy = require("passport-local");
 const User = require("./models/user.js");
 const listingRouter = require("./routes/listing.js");
 const reviewRouter = require("./routes/review.js");
 const userRouter = require("./routes/user.js");
 
 const dbUrl = process.env.ATLASDB_URL;
-console.log("ATLASDB_URL =", dbUrl);
-
 
 main().then(() => {
     console.log("connected to DB");
@@ -76,17 +72,25 @@ app.get("/", (req, res) => {
 app.use(session(sessionOptions));
 app.use(flash());
 
-app.use(passport.initialize());
-app.use(passport.session());
-passport.use(new LocalStrategy(User.authenticate()));
-
-passport.serializeUser(User.serializeUser());
-passport.deserializeUser(User.deserializeUser());
-
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
     res.locals.success = req.flash("success");
     res.locals.error = req.flash("error");
-    res.locals.currUser = req.user;
+    res.locals.currUser = null;
+
+    if (req.session.localUserId) {
+        try {
+            const user = await User.findById(req.session.localUserId);
+            if (user) {
+                req.authUser = user;
+                res.locals.currUser = user;
+            } else {
+                req.session.localUserId = null;
+            }
+        } catch (err) {
+            return next(err);
+        }
+    }
+
     next();
 });
 

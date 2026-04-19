@@ -281,3 +281,8 @@
     -webkit-animation-fill-mode: forwards;
             animation-fill-mode: forwards;
   }
+
+  .starability-result {
+    display: inline-block;
+    vertical-align: middle;
+  }

@@ -1,81 +1,29 @@
 <% layout("layouts/boilerplate") %>
-<style>
-    #filters {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: space-around;
-    }
+<%
+    const filterIcons = {
+        trending: "fa-solid fa-fire",
+        rooms: "fa-solid fa-bed",
+        cities: "fa-solid fa-mountain-city",
+        mountains: "fa-solid fa-mountain",
+        castles: "fa-brands fa-fort-awesome",
+        pools: "fa-solid fa-person-swimming",
+        camping: "fa-solid fa-campground",
+        farms: "fa-solid fa-tractor",
+        arctic: "fa-regular fa-snowflake",
+    };
+%>
 
-    .filter {
-        text-align: center;
-        margin-inline: 1rem;
-        margin-top: 1rem;
-        opacity: 0.7;
-        transition: all 0.3s ease-in-out;
-        cursor: pointer;
-    }
-
-    .filter:hover {
-        opacity: 1;
-    }
-
-    .filter p {
-        font-size: 0.8rem;
-    }
-
-    .tax-info {
-        display: none;
-    }
-
-    .tax-toggle {
-        border: 1px solid black;
-        border-radius: 1rem;
-        height: 3.25rem;
-        padding: 1rem;
-        margin-left: 3rem;
-        display: flex;
-        align-items: center;
-    }
-</style>
-
-<div id="filters">
-    <div class="filter">
-        <div><i class="fa-solid fa-fire"></i></div>
-        <p>Trending</p>
-    </div>
-    <div class="filter">
-        <div><i class="fa-solid fa-bed"></i></div>
-        <p>Rooms</p>
-    </div>
-    <div class="filter">
-        <div><i class="fa-solid fa-mountain-city"></i></div>
-        <p>Iconic cities</p>
-    </div>
-    <div class="filter">
-        <div><i class="fa-solid fa-mountain"></i></div>
-        <p>Mountains</p>
-    </div>
-    <div class="filter">
-        <div><i class="fa-brands fa-fort-awesome"></i></div>
-        <p>Castles</p>
-    </div>
-    <div class="filter">
-        <div><i class="fa-solid fa-person-swimming"></i></div>
-        <p>Amazing pools</p>
-    </div>
-    <div class="filter">
-        <div><i class="fa-solid fa-campground"></i></div>
-        <p>Camping</p>
-    </div>
-    <div class="filter">
-        <div><i class="fa-solid fa-tractor"></i></div>
-        <p>Farms</p>
-    </div>
-    <div class="filter">
-        <div><i class="fa-regular fa-snowflake"></i></div>
-        <p>Arctic</p>
-    </div>
+<div id="filters" class="filters-bar">
+    <% Object.entries(categoryLabels).forEach(([category, label]) => { %>
+        <a
+            class="filter <%= currentCategory === category ? 'active' : '' %>"
+            href="/listings?<%= new URLSearchParams({ ...(currentSearch ? { q: currentSearch } : {}), category }).toString() %>"
+        >
+            <div><i class="<%= filterIcons[category] %>"></i></div>
+            <p><%= label %></p>
+        </a>
+    <% }) %>
+    <a class="clear-filter-link" href="/listings<%= currentSearch ? `?${new URLSearchParams({ q: currentSearch }).toString()}` : '' %>">Clear filters</a>
     <div class="tax-toggle">
         <div class="form-check-reverse form-switch">
             <input class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckDefault">
@@ -84,43 +32,73 @@
     </div>
 </div>
 
-<div class="row row-cols-lg-3 row-cols-md-2 row-cols-sm-1 mt-3">
+<div class="results-header">
+    <div>
+        <h1 class="page-title">Stay where the story feels right</h1>
+        <p class="page-subtitle">
+            <% if (currentSearch && currentCategory) { %>
+                Showing places for "<%= currentSearch %>" in <%= categoryLabels[currentCategory] %>.
+            <% } else if (currentSearch) { %>
+                Showing places for "<%= currentSearch %>".
+            <% } else if (currentCategory) { %>
+                Showing <%= categoryLabels[currentCategory] %> stays.
+            <% } else { %>
+                Browse hand-picked places for city breaks, mountain escapes, and everything between.
+            <% } %>
+        </p>
+    </div>
+</div>
+
+<div class="row row-cols-xl-3 row-cols-md-2 row-cols-1 g-4 mt-1">
+    <% if (allListings.length === 0) { %>
+        <div class="col-12">
+            <div class="empty-state">
+                <h3>No places matched your search.</h3>
+                <p>Try another city, country, or category.</p>
+                <a href="/listings" class="btn btn-dark">See all places</a>
+            </div>
+        </div>
+    <% } %>
+
     <% for(let listing of allListings) { %>
-        <div class="col mb-4">
+        <div class="col">
             <a href="/listings/<%= listing._id %>" class="listing-link text-decoration-none">
                 <div class="card listing-card">
-                    <img 
-                    src="<%= listing.image && listing.image.url ? listing.image.url : 'https://via.placeholder.com/600x400?text=No+Image' %>" 
-                    class="card-img-top" 
-                    alt="listing_image" 
-                    style="height: 20rem;"
-                  >
-                  
+                    <img
+                        src="<%= listing.image && listing.image.url ? listing.image.url : 'https://via.placeholder.com/600x400?text=No+Image' %>"
+                        class="card-img-top listing-image"
+                        alt="listing_image"
+                    >
+
                     <div class="card-body">
-                        <p class="card-text">
+                        <div class="listing-meta">
+                            <span class="listing-badge"><%= categoryLabels[listing.primaryCategory] || "Trending" %></span>
+                            <span class="listing-place"><%= listing.location %>, <%= listing.country %></span>
+                        </div>
+                        <p class="card-text listing-copy">
                             <b><%= listing.title %></b> <br>
-                            &#8377; <%= listing.price.toLocaleString("en-IN") %> / night
+                            <span class="listing-price">&#8377; <%= listing.price.toLocaleString("en-IN") %> / night</span>
                             <i class="tax-info"> &nbsp; &nbsp;+18% GST</i>
                         </p>
                     </div>
                 </div>
             </a>
             <div class="mt-2">
-                <a href="/listings/<%= listing._id %>/book" class="btn btn-outline-dark w-100">Book</a>
+                <a href="/listings/<%= listing._id %>/book" class="btn btn-outline-dark w-100">Book now</a>
             </div>
         </div>
     <% } %>
 </div>
 
-
 <script>
   const taxSwitch = document.getElementById("flexSwitchCheckDefault");
 
-taxSwitch.addEventListener("change", () => { // 'change' is better than 'click' for checkboxes
-    const taxInfo = document.querySelectorAll(".tax-info");
-    taxInfo.forEach(info => {
+  if (taxSwitch) {
+    taxSwitch.addEventListener("change", () => {
+      const taxInfo = document.querySelectorAll(".tax-info");
+      taxInfo.forEach(info => {
         info.style.display = taxSwitch.checked ? "inline" : "none";
+      });
     });
-});
-
+  }
 </script>
